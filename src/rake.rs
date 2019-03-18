@@ -1,6 +1,5 @@
 use inner::NumberChecker;
 use keyword::{KeywordScore, KeywordSort};
-use regex::Regex;
 use std::collections::HashMap;
 use stopwords::StopWords;
 
@@ -8,10 +7,6 @@ use stopwords::StopWords;
 #[derive(Debug, Clone)]
 pub struct Rake {
     stop_words: StopWords,
-}
-
-lazy_static! {
-    static ref PUNC_RE: Regex = Regex::new(r"[^\P{P}-]|\s+-\s+").unwrap();
 }
 
 impl Rake {
@@ -79,9 +74,15 @@ impl Rake {
 
     fn phrases<'a>(&'a self, text: &'a str) -> Vec<Vec<&'a str>> {
         let mut phrases = Vec::new();
-        PUNC_RE.split(text).filter(|s| !s.is_empty()).for_each(|s| {
+
+        text.split(|c: char| match c {
+            '.'| ',' | '!' | '?' | ':' | ';' | '(' | ')' | '{' | '}' => true,
+            _ => false,
+        }).filter(|s| !s.is_empty()).for_each(|s| {
             let mut phrase = Vec::new();
-            s.split_whitespace().for_each(|word| {
+            s.split(|c:char| !c.is_alphanumeric() && c != '\'' && c != '’').filter(|s| !s.is_empty()).for_each(|word| {
+                let word = word.trim_matches(|c: char| !c.is_alphanumeric());
+
                 if self.stop_words.contains(word.to_lowercase().as_str()) {
                     if !phrase.is_empty() {
                         phrases.push(phrase.clone());
